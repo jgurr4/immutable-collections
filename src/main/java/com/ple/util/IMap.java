@@ -2,6 +2,7 @@ package com.ple.util;
 
 import java.util.List;
 
+@Immutable
 public interface IMap<K, V> extends Iterable<IEntry<K, V>> {
 
   IMap<K, V> putAll(Object... keyOrValue);

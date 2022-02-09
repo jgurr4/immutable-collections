@@ -1,5 +1,6 @@
 package com.ple.util;
 
+@Immutable
 public interface IList<T> extends Iterable<T> {
 
   T[] toArray();
