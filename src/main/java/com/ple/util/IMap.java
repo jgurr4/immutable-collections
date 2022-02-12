@@ -1,9 +1,9 @@
 package com.ple.util;
 
-import java.util.List;
-
 @Immutable
 public interface IMap<K, V> extends Iterable<IEntry<K, V>> {
+
+  IMap<K, V> putAll(Iterable<IEntry<K, V>> entriesToAdd);
 
   IMap<K, V> putAll(Object... keyOrValue);
 
@@ -15,8 +15,8 @@ public interface IMap<K, V> extends Iterable<IEntry<K, V>> {
 
   V get(K key);
 
-  List<K> keySet();
+  IList<K> keys();
 
-  List<V> values();
+  IList<V> values();
 
 }

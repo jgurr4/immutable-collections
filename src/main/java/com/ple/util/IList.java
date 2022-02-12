@@ -7,7 +7,7 @@ public interface IList<T> extends Iterable<T> {
 
   IList<T> addAll(IList<T> list);
 
-  public IList<T> add(T t);
+  IList<T> add(T t);
 
   T get(int i);
 
@@ -15,6 +15,6 @@ public interface IList<T> extends Iterable<T> {
 
   boolean contains(T t);
 
-  int length();
+  int size();
 
 }

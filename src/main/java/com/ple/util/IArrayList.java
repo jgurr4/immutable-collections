@@ -7,14 +7,18 @@ import java.util.Iterator;
 
 @Immutable
 public class IArrayList<V> implements IList<V> {
+
+  /** can't be parameterized because it may be used as an empty list of many different types */
+  public static final IList empty = IArrayList.make();
+
+  public static <V> IArrayList<V> make(V... values) {
+    return new IArrayList<>(values);
+  }
+
   public final V[] values;
 
   private IArrayList(V[] values) {
     this.values = values;
-  }
-
-  public static <V> IArrayList<V> make(V... values) {
-    return new IArrayList<>(values);
   }
 
   @Override
@@ -73,7 +77,7 @@ public class IArrayList<V> implements IList<V> {
   }
 
   @Override
-  public int length() {
+  public int size() {
     return values.length;
   }
 

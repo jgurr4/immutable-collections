@@ -7,9 +7,19 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ImmutableMapTests {
 
   @Test
-  void testSimple() {
-
+  void basicHashMap() {
     IMap<String, Integer> m1 = IHashMap.from("banana", 2, "grape", 3);
+    basicMap(m1);
+  }
+
+  @Test
+  void basicArrayMap() {
+    IMap<String, Integer> m1 = IArrayMap.make("banana", 2, "grape", 3);
+    basicMap(m1);
+  }
+
+  private void basicMap(IMap<String, Integer> m1) {
+
     IMap<String, Integer> m2 = m1.put("apple", 1);
 
     assertEquals(2, m1.size());
@@ -19,6 +29,20 @@ public class ImmutableMapTests {
     assertEquals(2, m1.get("banana"));
     assertEquals(3, m1.get("grape"));
     assertEquals(2, m2.get("banana"));
+
+    IMap<String, Integer> m3 = m1.put("cherry", 5);
+    m3 = m3.put("lemon", 6);
+    m3 = m3.put("lime", 7);
+    m3 = m3.put("orange", 8);
+    assertEquals(6, m3.size());
+    assertEquals(7, m3.get("lime"));
+    assertEquals(8, m3.get("orange"));
+    assertEquals(6, m3.values().size());
+    assertEquals(6, m3.keys().size());
+    assertTrue(m3.keys().contains("cherry"));
+    assertTrue(m3.keys().contains("orange"));
+    assertTrue(m3.values().contains(6));
+    assertFalse(m3.values().contains(1));
 
   }
 
