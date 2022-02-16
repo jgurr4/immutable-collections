@@ -5,7 +5,7 @@ import java.util.Objects;
 @Immutable
 class IEntry<K, V> {
 
-  public static <K, V> IEntry<K, V> from(K key, V value) {
+  public static <K, V> IEntry<K, V> make(K key, V value) {
     return new IEntry<>(key, value);
   }
 

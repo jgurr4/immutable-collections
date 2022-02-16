@@ -8,14 +8,24 @@ public class ImmutableMapTests {
 
   @Test
   void basicHashMap() {
-    IMap<String, Integer> m1 = IHashMap.from("banana", 2, "grape", 3);
+    IMap<String, Integer> m1 = IHashMap.make("banana", 2, "grape", 3);
     basicMap(m1);
+    putAll(m1);
   }
 
   @Test
   void basicArrayMap() {
     IMap<String, Integer> m1 = IArrayMap.make("banana", 2, "grape", 3);
     basicMap(m1);
+    putAll(m1);
+  }
+
+  private void putAll(IMap<String, Integer> m1) {
+    assertEquals(3, m1.get("grape"));
+    IMap<String, Integer> m2 = m1.putAll("lemon", 6, "lime", 3, "orange", 9, "grape", 2);
+    assertEquals(2, m2.get("banana"));
+    assertEquals(2, m2.get("grape"));
+    assertEquals(3, m2.get("lime"));
   }
 
   private void basicMap(IMap<String, Integer> m1) {
@@ -49,23 +59,20 @@ public class ImmutableMapTests {
   @Test
   void testHashSpaceExpansion() {
 
-    IHashMap<String, String> m1 = IHashMap.empty.setBucketCount(1).setBucketSize(2).setThreshold(.3);
+    IHashMap<String, String> m1 = IHashMap.empty.setBucketCount(1).setDensity(.3);
     assertEquals(m1.getBucketCount(), 1);
-    assertEquals(2, m1.getBucketSize());
+    assertEquals(1, m1.getBucketCount());
 
     var m2 = m1.putAll("apple", "red", "banana", "yellow");
-    assertEquals(6, m2.getBucketCount());
-    assertEquals(2, m2.getBucketSize());
+    assertEquals(8, m2.getBucketCount());
 
     var m3 = m2.put("grape", "purple");
-    assertEquals(6, m3.getBucketCount());
-    assertEquals(2, m3.getBucketSize());
+    assertEquals(16, m3.getBucketCount());
     assertEquals("yellow", m3.get("banana"));
     assertEquals("purple", m3.get("grape"));
 
     var m4 = m2.put("orange", "orange").put("blueberry", "blue");
-    assertEquals(6, m4.getBucketCount());
-    assertEquals(2, m4.getBucketSize());
+    assertEquals(16, m4.getBucketCount());
     assertEquals("red", m4.get("apple"));
     assertEquals("orange", m4.get("orange"));
 

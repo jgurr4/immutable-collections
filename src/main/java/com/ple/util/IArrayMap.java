@@ -8,58 +8,35 @@ import java.util.*;
 @Immutable
 public class IArrayMap<K, V> implements IMap<K, V> {
 
-  public static final IArrayMap empty = new IArrayMap(new IEntry[0]);
+  public static final IArrayMap empty = new IArrayMap(new Object[0]);
 
   public static <K, V> IArrayMap<K, V> make(Object... keyCommaValue) {
-
     assert keyCommaValue.length % 2 == 0;
-    final int entriesInUse = keyCommaValue.length / 2;
-    final IEntry[] entries = new IEntry[entriesInUse];
-
-    for (int i = 0; i < keyCommaValue.length - 1; i += 2) {
-      final K key = (K) keyCommaValue[i];
-      final V value = (V) keyCommaValue[i + 1];
-      entries[i >> 1] = IEntry.from(key, value);
-    }
-
-    final IArrayMap<K, V> map = new IArrayMap<>(entries);
-    return map;
-
+    return new IArrayMap<K, V>(keyCommaValue);
   }
 
-  private final IEntry<K, V>[] entries;
+  private final Object[] entries;
 
-  private IArrayMap(IEntry<K, V>[] entries) {
+  private IArrayMap(Object[] entries) {
     this.entries = entries;
   }
 
   @Override
   public IArrayMap<K, V> putAll(Iterable<IEntry<K, V>> entriesToAdd) {
 
-    final IEntry<K, V>[] oldEntries = new IEntry[entries.length];
-    System.arraycopy(entries, 0, oldEntries, 0, entries.length);
-    final List<IEntry<K, V>> newEntries = new ArrayList<>();
-
-    for (IEntry<K, V> entry : entriesToAdd) {
-      int i = getEntryIndex(entry.key);
-      if (i >= 0) {
-        oldEntries[i] = entry;
-      } else {
-        newEntries.add(entry);
-      }
+    ArrayList<Object> list = new ArrayList<>();
+    for (IEntry<K, V> next : entriesToAdd) {
+      list.add(next.key);
+      list.add(next.value);
     }
 
-    final IEntry<K, V>[] finalEntries = new IEntry[entries.length + newEntries.size()];
-    System.arraycopy(oldEntries, 0, finalEntries, 0, oldEntries.length);
-    System.arraycopy(newEntries.toArray(), 0, finalEntries, oldEntries.length, newEntries.size());
-    return new IArrayMap<>(finalEntries);
+    return putAll(list.toArray());
 
   }
 
   private int getEntryIndex(K key) {
-    for (int i = 0; i < entries.length; i++) {
-      IEntry<K, V> entry = entries[i];
-      if (Objects.equals(entry.key, key)) {
+    for (int i = 0; i < entries.length; i += 2) {
+      if (Objects.equals(entries[i], key)) {
         return i;
       }
     }
@@ -70,19 +47,35 @@ public class IArrayMap<K, V> implements IMap<K, V> {
   public IArrayMap<K, V> putAll(Object... keyCommaValue) {
 
     if (keyCommaValue.length % 2 != 0) {
-      throw new IllegalArgumentException("IArrayMap.putAll must have an even number of parameters");
+      throw new IllegalArgumentException("IHashMap.putAll must have an even number of parameters");
     }
 
-    final int entryCount = keyCommaValue.length >> 1;
-    final IEntry<K, V>[] newEntries = new IEntry[entryCount];
+    final Object[] oldEntries = new Object[entries.length];
+    System.arraycopy(entries, 0, oldEntries, 0, entries.length);
+    final Object[] newEntries = new Object[keyCommaValue.length];
+    int newEntryIndex = 0;
 
-    for (int i = 0; i < keyCommaValue.length - 1; i += 2) {
-      final K key = (K) keyCommaValue[i];
-      final V value = (V) keyCommaValue[i + 1];
-      entries[i >> 1] = IEntry.from(key, value);
+    for (int i = 0; i < keyCommaValue.length; i += 2) {
+
+      K key = (K) keyCommaValue[i];
+      V value = (V) keyCommaValue[i + 1];
+
+      int existing = getEntryIndex(key);
+      if (existing >= 0) {
+        oldEntries[existing] = key;
+        oldEntries[existing + 1] = value;
+      } else {
+        newEntries[newEntryIndex] = key;
+        newEntries[newEntryIndex + 1] = value;
+        newEntryIndex += 2;
+      }
     }
 
-    return putAll((Object[])newEntries);
+    final Object[] finalEntries = new Object[entries.length + newEntryIndex];
+    System.arraycopy(oldEntries, 0, finalEntries, 0, oldEntries.length);
+    System.arraycopy(newEntries, 0, finalEntries, oldEntries.length, newEntryIndex);
+
+    return new IArrayMap<>(finalEntries);
 
   }
 
@@ -94,33 +87,57 @@ public class IArrayMap<K, V> implements IMap<K, V> {
   @Override
   public IArrayMap<K, V> put(K key, V value) {
 
-    final IEntry<K, V>[] oldEntries = new IEntry[entries.length];
-    System.arraycopy(entries, 0, oldEntries, 0, entries.length);
-    final List<IEntry<K, V>> newEntries = new ArrayList<>();
-
     int i = getEntryIndex(key);
-    final IEntry entry = IEntry.from(key, value);
+
+    Object[] newEntries;
     if (i >= 0) {
-      oldEntries[i] = entry;
+
+      newEntries = new Object[entries.length];
+      System.arraycopy(entries, 0, newEntries, 0, entries.length);
+      newEntries[i] = key;
+      newEntries[i + 1] = value;
+
     } else {
-      newEntries.add(entry);
+
+      newEntries = new Object[entries.length + 2];
+      System.arraycopy(entries, 0, newEntries, 0, entries.length);
+      newEntries[entries.length] = key;
+      newEntries[entries.length + 1] = value;
+
     }
 
-    final IEntry<K, V>[] finalEntries = new IEntry[entries.length + newEntries.size()];
-    System.arraycopy(oldEntries, 0, finalEntries, 0, oldEntries.length);
-    System.arraycopy(newEntries.toArray(), 0, finalEntries, oldEntries.length, newEntries.size());
-    return new IArrayMap<>(finalEntries);
+    return new IArrayMap<>(newEntries);
 
   }
 
   @Override
   public IMap<K, V> remove(K key) {
-    return null;
+
+    int i = getEntryIndex(key);
+
+    final IMap<K, V> result;
+
+    if (i >= 0) {
+
+      Object[] newEntries;
+      newEntries = new Object[entries.length - 1];
+      System.arraycopy(entries, 0, newEntries, 0, i);
+      System.arraycopy(entries, i + 1, newEntries, i, entries.length - i - 2);
+      result = IArrayMap.make(newEntries);
+
+    } else {
+
+      result = this;
+
+    }
+
+    return result;
+
   }
 
   @Override
   public int size() {
-    return entries.length;
+    return entries.length / 2;
   }
 
   @Override
@@ -128,7 +145,7 @@ public class IArrayMap<K, V> implements IMap<K, V> {
   public V get(K key) {
     int i = getEntryIndex(key);
     if (i >= 0) {
-      return entries[i].value;
+      return (V) entries[i + 1];
     } else {
       return null;
     }
@@ -136,18 +153,18 @@ public class IArrayMap<K, V> implements IMap<K, V> {
 
   @Override
   public IList<K> keys() {
-    K[] ks = (K[]) new Object[entries.length];
+    K[] ks = (K[]) new Object[entries.length / 2];
     for (int i = 0; i < ks.length; i++) {
-      ks[i] = entries[i].key;
+      ks[i] = (K) entries[i*2];
     }
     return IArrayList.make(ks);
   }
 
   @Override
   public IList<V> values() {
-    V[] vs = (V[]) new Object[entries.length];
+    V[] vs = (V[]) new Object[entries.length / 2];
     for (int i = 0; i < vs.length; i++) {
-      vs[i] = entries[i].value;
+      vs[i] = (V) entries[i*2 + 1];
     }
     return IArrayList.make(vs);
   }
@@ -167,8 +184,8 @@ public class IArrayMap<K, V> implements IMap<K, V> {
       @Override
       public IEntry<K, V> next() {
         if (hasNext()) {
-          currentIndex++;
-          return entries[currentIndex];
+          currentIndex += 2;
+          return IEntry.make((K)entries[currentIndex], (V)entries[currentIndex + 1]);
         } else {
           throw new NoSuchElementException();
         }

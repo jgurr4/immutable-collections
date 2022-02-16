@@ -7,65 +7,35 @@ import java.util.*;
 @Immutable
 public class IHashMap<K, V> implements IMap<K, V> {
 
-  static public final IHashMap empty = new IHashMap(new IEntry[0], 5, 0, 6, 2);
+  static public final IHashMap empty = new IHashMap(new Object[0], 0, 0.3);
 
-  public static <K, V> IHashMap<K, V> from(Object... keyCommaValue) {
-
+  public static <K, V> IHashMap<K, V> make(Object... keyCommaValue) {
     if (keyCommaValue.length % 2 != 0) {
-      throw new IllegalArgumentException("IHashMap.from must have an even number of parameters");
+      throw new IllegalArgumentException("IHashMap.make must have an even number of parameters");
     }
-
-    final int entriesInUse = keyCommaValue.length / 2;
-    final int bucketSize = 5;
-    final int entryCount = (int) (keyCommaValue.length / .3f);
-    final int bucketCount = entryCount / bucketSize;
-    final IEntry<K, V>[] entries = new IEntry[entryCount];
-    for (int i = 0; i < keyCommaValue.length - 1; i += 2) {
-      final K key = (K) keyCommaValue[i];
-      final V value = (V) keyCommaValue[i + 1];
-      final int hashCode = Math.abs(key.hashCode());
-      final int bucketIndex = hashCode % bucketCount;
-      int c = 0;
-      int entryIndex = bucketIndex * bucketSize;
-      while (c < entries.length) {
-        if (entries[entryIndex] == null) {
-          entries[entryIndex] = IEntry.from(key, value);
-          break;
-        }
-        c++;
-        entryIndex++;
-        if (entryIndex >= entries.length) {
-          entryIndex = 0;
-        }
-      }
-    }
-    final IHashMap<K, V> map = new IHashMap<>(entries, bucketSize, entriesInUse, bucketCount, 2);
-    return map;
+    return empty.putAll(keyCommaValue);
   }
 
-  private final IEntry<K, V>[] entries;
-  private final int bucketSize;
-  private final float threshold = 0.3f;
+  /**
+   * length of this array must be an even number, since it is full of key/value pairs
+   */
+  private final Object[] table;
   private final int entriesInUse;
-  private final int bucketCount;
-  private final int expansionFactor;
+  private final double density;
 
-  private IHashMap(IEntry<K, V>[] entries, int bucketSize, int entriesInUse, int bucketCount, int expansionFactor) {
-
-    this.entries = entries;
-    this.bucketSize = bucketSize;
+  private IHashMap(Object[] table, int entriesInUse, double density) {
+    this.table = table;
     this.entriesInUse = entriesInUse;
-    this.bucketCount = bucketCount;
-    this.expansionFactor = expansionFactor;
-
+    this.density = density;
   }
 
   @Override
   public IMap<K, V> putAll(Iterable<IEntry<K, V>> entriesToAdd) {
 
-    ArrayList<IEntry<K, V>> list = new ArrayList<>();
+    ArrayList<Object> list = new ArrayList<>();
     for (IEntry<K, V> next : entriesToAdd) {
-      list.add(next);
+      list.add(next.key);
+      list.add(next.value);
     }
 
     return putAll(list.toArray());
@@ -73,46 +43,106 @@ public class IHashMap<K, V> implements IMap<K, V> {
   }
 
   @Override
-  public IHashMap<K, V> putAll(Object... keyOrValue) {
+  public IHashMap<K, V> putAll(Object... keyCommaValue) {
 
-    int c = 0;
-    assert keyOrValue.length % 2 == 0;
-    IEntry<K, V>[] newEntries = new IEntry[entries.length];
-    int newBucketCount = bucketCount;
-    int newEntriesInUse = keyOrValue.length / 2 + entriesInUse;
-    if (newEntriesInUse > (int) (entries.length * threshold)) {
-      final int entryCount = (int) (newEntriesInUse * 2 / threshold);
-      newBucketCount = entryCount / bucketSize;
-      newEntries = new IEntry[entryCount];
-      rehash(entries, newEntries, newBucketCount, bucketSize);
+    if (keyCommaValue.length % 2 != 0) {
+      throw new IllegalArgumentException("IHashMap.putAll must have an even number of parameters");
+    }
+
+    final int newEntriesToAdd = keyCommaValue.length / 2;
+    final double preTableSize = (newEntriesToAdd + entriesInUse) / density;
+    final int tableSize = (int) (Math.pow(2, 1 + Math.ceil(Math.log(preTableSize) / Math.log(2))));
+    int totalEntries = entriesInUse;
+    boolean changed = false;
+    Object[] table = new Object[tableSize];
+
+    if (tableSize != this.table.length) {
+      changed = true;
+      totalEntries = rehash(this.table, table);
     } else {
-      while (c < entries.length) {
-        newEntries[c] = entries[c];
-        c++;
-      }
-      c = 0;
+      System.arraycopy(this.table, 0, table, 0, tableSize);
     }
-    for (int i = 0; i < keyOrValue.length - 1; i += 2) {
-      final K key = (K) keyOrValue[i];
-      final V value = (V) keyOrValue[i + 1];
-      final int hashCode = Math.abs(key.hashCode());
-      final int bucketIndex = hashCode % newBucketCount;
-      int entryIndex = bucketIndex * bucketSize;
-      while (c < newEntries.length) {
-        if (newEntries[entryIndex] == null) {
-          newEntries[entryIndex] = IEntry.from(key, value);
-          break;
-        }
-        c++;
-        entryIndex++;
-        if (entryIndex >= newEntries.length) {
-          entryIndex = 0;
-        }
-      }
+
+    for (int i = 0; i < keyCommaValue.length; i += 2) {
+
+      final K key = (K) keyCommaValue[i];
+      final V value = (V) keyCommaValue[i + 1];
+
+      ChangeType change = putIntoTable(key, value, table);
+      if (change == ChangeType.create) totalEntries++;
+      if (change == ChangeType.create || change == ChangeType.update) changed = true;
+
     }
-    final IHashMap<K, V> map = new IHashMap<>(newEntries, bucketSize, newEntriesInUse, newBucketCount, 2);
+
+    final IHashMap<K, V> map;
+    if (changed) {
+      map = new IHashMap<K, V>(table, totalEntries, density);
+    } else {
+      map = this;
+    }
+
     return map;
 
+  }
+
+  private ChangeType putIntoTable(K key, V value, Object[] table) {
+
+    final int bucketIndex = getExpectedBucketIndex(key, table);
+    ChangeType change = ChangeType.none;
+
+    int bucketIndexForKey = findBucketIndexForKey(key, bucketIndex, table);
+
+    if (bucketIndexForKey == -1) {
+      bucketIndexForKey = findNextEmptyBucket(bucketIndex, table);
+      if (bucketIndexForKey == -1) {
+        throw new InternalError("FATAL: Bug in IHashMap.putAll: could not find empty bucket for new key");
+      }
+      table[bucketIndexForKey] = key;
+      change = ChangeType.create;
+    }
+
+    if (!Objects.equals(table[bucketIndexForKey + 1], value)) {
+      table[bucketIndexForKey + 1] = value;
+      if (change == ChangeType.none) change = ChangeType.update;
+    }
+
+    return change;
+
+  }
+
+  private int getExpectedBucketIndex(K key, Object[] table) {
+    if (table.length < 2) return 0;
+    final int hashCode = Math.abs(key.hashCode());
+    final int bucketCount = table.length / 2;
+    final int bucketIndex = hashCode % bucketCount * 2;
+    return bucketIndex;
+  }
+
+  private int findNextEmptyBucket(int startingIndex, Object[] table) {
+    assert startingIndex % 2 == 0;
+    int foundIndex = -1;
+    for (int i = 0; i < table.length; i += 2) {
+      int adjustedIndex = (i + startingIndex) % table.length;
+      if(table[adjustedIndex] == null) {
+        foundIndex = adjustedIndex;
+        break;
+      }
+    }
+    return foundIndex;
+  }
+
+  private int findBucketIndexForKey(K key, int startingIndex, Object[] table) {
+    assert startingIndex % 2 == 0;
+    int foundIndex = -1;
+    for (int i = 0; i < table.length; i += 2) {
+      int adjustedIndex = (i + startingIndex) % table.length;
+      K k = (K) table[adjustedIndex];
+      if (Objects.equals(k, key)) {
+        foundIndex = adjustedIndex;
+        break;
+      }
+    }
+    return foundIndex;
   }
 
   /**
@@ -123,53 +153,12 @@ public class IHashMap<K, V> implements IMap<K, V> {
    */
   @Override
   public IHashMap<K, V> put(K key, V value) {
-    int newBucketCount = bucketCount;
-    IEntry<K, V>[] newEntries;
-    if (entries.length == 0) {
-      newEntries = new IEntry[bucketSize * 10];
-    } else {
-      newEntries = new IEntry[entries.length];
-    }
-    int c = 0;
-    // Copy values from old entries[] to new entries[].
-    while (c < entries.length) {
-      newEntries[c] = entries[c];
-      c++;
-    }
-    c = 0;
-    final int hashCode = Math.abs(key.hashCode());
-    final int bucketIndex = hashCode % newBucketCount;
-    int entryIndex = bucketIndex * bucketSize;
-    int newEntriesInUse = entriesInUse;
-    // Add new value to newEntries[] and resize bucket if necessary.
-    while (c < newEntries.length) {
-      if (newEntries[entryIndex] == null) {
-        newEntries[entryIndex] = IEntry.from(key, value);
-        newEntriesInUse += 1;
-        break;
-      }
-      c++;
-      entryIndex++;
-      if (entryIndex >= newEntries.length) {
-        entryIndex = 0;
-      }
-    }
-    if (entriesInUse > newEntries.length * threshold) {
-      final int entryCount = getEntryCount();
-      newBucketCount = entryCount / bucketSize;
-      newEntries = new IEntry[entryCount];
-    }
-    final IHashMap<K, V> map = new IHashMap<>(newEntries, bucketSize, newEntriesInUse, newBucketCount, 2);
-    return map;
+    return putAll(key, value);
   }
 
   @Override
   public IMap<K, V> remove(K key) {
-    return null;
-  }
-
-  private int getEntryCount() {
-    return (int) (entriesInUse * expansionFactor / threshold);
+    throw new InternalError("Not implemented yet");
   }
 
   @Override
@@ -179,103 +168,66 @@ public class IHashMap<K, V> implements IMap<K, V> {
 
   @Override
   public V get(K key) {
-    if (entriesInUse == 0 || !keys().contains(key)) {
+    int expectedBucketIndex = getExpectedBucketIndex(key, table);
+    int index = findBucketIndexForKey(key, expectedBucketIndex, this.table);
+    if (index == -1) {
       return null;
+    } else {
+      return (V) table[index + 1];
     }
-    final int hashCode = Math.abs(key.hashCode());
-    final int bucketIndex = hashCode % bucketCount;
-    int entryIndex = bucketIndex * bucketSize;
-    int c = 0;
-    while (c < entries.length) {
-      if (entries[entryIndex] == null) {
-        return null;
-      } else if (entries[entryIndex].key == key) {
-        return entries[entryIndex].value;
-      }
-      c++;
-      entryIndex++;
-    }
-    return null;
   }
 
   @Override
   public IList<K> keys() {
-    //TODO: Consider replacing this with AbstractSet with implementation methods.
     ArrayList<K> ks = new ArrayList<>();
-    for (IEntry<K, V> entry : entries) {
-      if (entry == null) {
+    for (int i = 0; i < table.length; i += 2) {
+      K key = (K) table[i];
+      if (key == null) {
         continue;
       }
-      ks.add(entry.key);
+      ks.add(key);
     }
     return (IList<K>) IArrayList.make(ks.toArray());
   }
 
   @Override
   public IList<V> values() {
-    final ArrayList<V> list = new ArrayList<>();
-    for (IEntry<K, V> entry : entries) {
-      if (entry == null) {
+    ArrayList<V> vs = new ArrayList<>();
+    for (int i = 0; i < table.length; i += 2) {
+      V value = (V) table[i + 1];
+      if (value == null) {
         continue;
       }
-      list.add(entry.value);
+      vs.add(value);
     }
-    return (IList<V>) IArrayList.make(list.toArray());
-  }
-
-  public IHashMap<K, V> setBucketSize(int newBucketSize) {
-
-    final IEntry<K, V>[] newEntries = new IEntry[entries.length];
-    rehash(entries, newEntries, bucketCount, newBucketSize);
-    return new IHashMap(newEntries, newBucketSize, entriesInUse, bucketCount, 2);
-
-  }
-
-  public IHashMap<K, V> setBucketCount(int newBucketCount) {
-
-    final IEntry<K, V>[] newEntries = new IEntry[newBucketCount * bucketSize];
-    rehash(entries, newEntries, newBucketCount, bucketSize);
-    return new IHashMap(newEntries, bucketSize, entriesInUse, newBucketCount, 2);
-  }
-
-  private void rehash(IEntry<K, V>[] entries, IEntry<K, V>[] newEntries, int newBucketCount, int newBucketSize) {
-
-    for (int i = 0; i < entries.length; i++) {
-      if (entries[i] != null) {
-        IEntry<K, V> entry = entries[i];
-        final int newBucketIndex = Math.abs(entry.key.hashCode()) % newBucketCount * newBucketSize;
-        for (int k = newBucketIndex; k < newEntries.length; k++) {
-          if (k > newEntries.length) {
-            k = 0;
-          }
-          if (newEntries[k] == null) {
-            newEntries[k] = entry;
-            break;
-          }
-        }
-      }
-    }
-
+    return (IList<V>) IArrayList.make(vs.toArray());
   }
 
   public int getBucketCount() {
-    return bucketCount;
+    return table.length / 2;
   }
 
-  public int getBucketSize() {
-    return bucketSize;
+  public IHashMap<K, V> setBucketCount(int newBucketCount) {
+    final Object[] newTable = new Object[newBucketCount * 2];
+    int entryCount = rehash(table, newTable);
+    return new IHashMap(newTable, entryCount, density);
   }
 
-  public IHashMap<K, V> setThreshold(double v) {
-
-    IEntry<K, V>[] newEntries = entries;
-    int newBucketCount = bucketCount;
-    if (entriesInUse > entries.length * threshold) {
-      newEntries = new IEntry[entries.length];
-      newBucketCount = getEntryCount() / bucketSize;
-      rehash(entries, newEntries, newBucketCount, bucketSize);
+  private int rehash(Object[] oldTable, Object[] newTable) {
+    int totalEntries = 0;
+    for (int i = 0; i < oldTable.length; i += 2) {
+      K key = (K) oldTable[i];
+      V value = (V) oldTable[i + 1];
+      if (key != null) {
+        ChangeType change = putIntoTable(key, value, newTable);
+        if (change == ChangeType.create) totalEntries++;
+      }
     }
-    return new IHashMap(newEntries, bucketSize, entriesInUse, newBucketCount, expansionFactor);
+    return totalEntries;
+  }
+
+  public IHashMap<K, V> setDensity(double density) {
+    return new IHashMap<>(table, entriesInUse, density);
   }
 
   @NotNull
@@ -287,14 +239,14 @@ public class IHashMap<K, V> implements IMap<K, V> {
 
       @Override
       public boolean hasNext() {
-        return currentIndex < entries.length;
+        return currentIndex < table.length;
       }
 
       @Override
       public IEntry<K, V> next() {
         if (hasNext()) {
-          currentIndex++;
-          return entries[currentIndex];
+          currentIndex += 2;
+          return IEntry.make((K)table[currentIndex], (V)table[currentIndex + 1]);
         } else {
           throw new NoSuchElementException();
         }
@@ -305,27 +257,24 @@ public class IHashMap<K, V> implements IMap<K, V> {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (!(o instanceof IHashMap)) return false;
+    if (o == null || getClass() != o.getClass()) return false;
     IHashMap<?, ?> iHashMap = (IHashMap<?, ?>) o;
-    return getBucketSize() == iHashMap.getBucketSize() && Float.compare(iHashMap.threshold, threshold) == 0 && entriesInUse == iHashMap.entriesInUse && getBucketCount() == iHashMap.getBucketCount() && expansionFactor == iHashMap.expansionFactor && Arrays.equals(entries, iHashMap.entries);
+    return entriesInUse == iHashMap.entriesInUse && Double.compare(iHashMap.density, density) == 0 && Arrays.equals(table, iHashMap.table);
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(getBucketSize(), threshold, entriesInUse, getBucketCount(), expansionFactor);
-    result = 31 * result + Arrays.hashCode(entries);
+    int result = Objects.hash(entriesInUse, density);
+    result = 31 * result + Arrays.hashCode(table);
     return result;
   }
 
   @Override
   public String toString() {
     return "IHashMap{" +
-      "entries=" + Arrays.toString(entries) +
-      ", bucketSize=" + bucketSize +
-      ", threshold=" + threshold +
+      "table=" + Arrays.toString(table) +
       ", entriesInUse=" + entriesInUse +
-      ", bucketCount=" + bucketCount +
-      ", expansionFactor=" + expansionFactor +
+      ", density=" + density +
       '}';
   }
 
