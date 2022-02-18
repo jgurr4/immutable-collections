@@ -12,6 +12,7 @@ public class IArrayMap<K, V> implements IMap<K, V> {
 
   public static <K, V> IArrayMap<K, V> make(Object... keyCommaValue) {
     assert keyCommaValue.length % 2 == 0;
+    if (keyCommaValue.length == 0) return empty;
     return new IArrayMap<K, V>(keyCommaValue);
   }
 
@@ -174,7 +175,7 @@ public class IArrayMap<K, V> implements IMap<K, V> {
   public Iterator<IEntry<K, V>> iterator() {
     return new Iterator<>() {
 
-      public int currentIndex = -1;
+      public int currentIndex = 0;
 
       @Override
       public boolean hasNext() {
@@ -184,8 +185,9 @@ public class IArrayMap<K, V> implements IMap<K, V> {
       @Override
       public IEntry<K, V> next() {
         if (hasNext()) {
+          IEntry<K, V> entry = IEntry.make((K) entries[currentIndex], (V) entries[currentIndex + 1]);
           currentIndex += 2;
-          return IEntry.make((K)entries[currentIndex], (V)entries[currentIndex + 1]);
+          return entry;
         } else {
           throw new NoSuchElementException();
         }

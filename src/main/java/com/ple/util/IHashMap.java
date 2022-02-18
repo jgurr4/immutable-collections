@@ -13,6 +13,7 @@ public class IHashMap<K, V> implements IMap<K, V> {
     if (keyCommaValue.length % 2 != 0) {
       throw new IllegalArgumentException("IHashMap.make must have an even number of parameters");
     }
+    if (keyCommaValue.length == 0) return empty;
     return empty.putAll(keyCommaValue);
   }
 
