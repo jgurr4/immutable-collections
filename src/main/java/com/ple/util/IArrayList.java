@@ -9,7 +9,7 @@ import java.util.Iterator;
 public class IArrayList<V> implements IList<V> {
 
   /** can't be parameterized because it may be used as an empty list of many different types */
-  public static final IList empty = IArrayList.make();
+  public static final IArrayList empty = new IArrayList(new Object[0]);
 
   public static <V> IArrayList<V> make(V... values) {
     return new IArrayList<>(values);
@@ -23,7 +23,18 @@ public class IArrayList<V> implements IList<V> {
 
   @Override
   public V[] toArray() {
-    return this.values;
+    return values;
+  }
+
+  @Override
+  public V[] toArray(V[] a) {
+    if (a.length < values.length)
+      // Make a new array of a's runtime type, but my contents:
+      return (V[]) Arrays.copyOf(values, values.length, a.getClass());
+    System.arraycopy(values, 0, a, 0, values.length);
+    if (a.length > values.length)
+      a[values.length] = null;
+    return a;
   }
 
   @Override

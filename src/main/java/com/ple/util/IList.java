@@ -5,6 +5,8 @@ public interface IList<T> extends Iterable<T> {
 
   T[] toArray();
 
+  T[] toArray(T[] t);
+
   IList<T> addAll(IList<T> list);
 
   IList<T> add(T t);

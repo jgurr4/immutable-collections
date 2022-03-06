@@ -121,9 +121,9 @@ public class IArrayMap<K, V> implements IMap<K, V> {
     if (i >= 0) {
 
       Object[] newEntries;
-      newEntries = new Object[entries.length - 1];
+      newEntries = new Object[entries.length - 2];
       System.arraycopy(entries, 0, newEntries, 0, i);
-      System.arraycopy(entries, i + 1, newEntries, i, entries.length - i - 2);
+      System.arraycopy(entries, i + 2, newEntries, i, entries.length - i - 2);
       result = IArrayMap.make(newEntries);
 
     } else {

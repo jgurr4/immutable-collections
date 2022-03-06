@@ -3,6 +3,7 @@ package com.ple.util;
 import java.util.Objects;
 
 @Immutable
+public
 class IEntry<K, V> {
 
   public static <K, V> IEntry<K, V> make(K key, V value) {
