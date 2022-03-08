@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 @Immutable
 public class IArrayList<V> implements IList<V> {
@@ -13,6 +14,14 @@ public class IArrayList<V> implements IList<V> {
 
   public static <V> IArrayList<V> make(V... values) {
     return new IArrayList<>(values);
+  }
+
+  public static <V> IArrayList<V> make(List<V> list) {
+    IList<V> newList = IArrayList.empty;
+    for (V v : list) {
+      newList = newList.add(v);
+    }
+    return (IArrayList<V>) newList;
   }
 
   public final V[] values;
