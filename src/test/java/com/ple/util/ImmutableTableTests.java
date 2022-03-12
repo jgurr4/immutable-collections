@@ -11,7 +11,7 @@ public class ImmutableTableTests {
   @Test
   public void testToString() {
     final IArrayList<String> colNames = IArrayList.make("name", "age", "date_added");
-    final Object[] objects = {"john", 33, LocalDate.of(2022,03,11), "bob", 42, LocalDate.of(2021, 11, 23)};
+    final Object[] objects = {"john", 33, LocalDate.of(2022,3,11), "bob", 42, LocalDate.of(2021, 11, 23)};
     final ITable userTable = ITable.make(colNames, objects);
     assertEquals("""
         ITable
@@ -58,4 +58,25 @@ public class ImmutableTableTests {
     assertEquals(LocalDate.of(2010, 4, 13), daltonsDateAdded);
     assertEquals(24, suziesAge);
   }
+
+  @Test
+  public void testGetRow() {
+    final IArrayList<String> colNames = IArrayList.make("name", "age", "date_added");
+    final Object[] objects = {
+        "john", 33, LocalDate.now(),
+        "bob", 42, LocalDate.of(2021, 11, 23),
+        "suzie", 24, LocalDate.of(2003, 12, 3),
+        "dalton", 17, LocalDate.of(2010, 4, 13)
+    };
+    final ITable userTable = ITable.make(colNames, objects);
+    final Object[] john = userTable.getRow(0);
+    final Object[] bob = userTable.getRow(1);
+    final Object[] suzie = userTable.getRow(2);
+    final Object[] dalton = userTable.getRow(3);
+    assertArrayEquals(new Object[]{"john", 33, LocalDate.now()}, john);
+    assertArrayEquals(new Object[]{"bob", 42, LocalDate.of(2021, 11, 23)}, bob);
+    assertArrayEquals(new Object[]{"suzie", 24, LocalDate.of(2003, 12, 3)}, suzie);
+    assertArrayEquals(new Object[]{"dalton", 17, LocalDate.of(2010, 4, 13)}, dalton);
+  }
+
 }

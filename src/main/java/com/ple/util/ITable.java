@@ -38,13 +38,16 @@ public class ITable {
   //This returns the next row of resultList.values. Which is a Object[]. Row 1 starts at 0. If there are 5 columns row 2 starts at 5.
   // The user specifies rowNum, then result is Object[5]{rowNum*5 + rowNum*5 + 5}
   public Object[] getRow(int rowIndex) {
-    return null;
+    final Object[] row = new Object[columnNames.size()];
+    final int destPos = 0;
+    final int srcPos = rowIndex * columnNames.size();
+    System.arraycopy(values, srcPos, row, destPos, columnNames.size());
+    return row;
   }
 
   // This returns a specific element from a specific row. get(0, 0) will return the first value, get(2,3) will return the 4th column value of the 3rd row.
   public Object get(int rowIndex, int columnIndex) {
-    final int i = (rowIndex * columnNames.size()) + columnIndex;
-    return values[i];
+    return values[(rowIndex * columnNames.size()) + columnIndex];
   }
 
   @Override
