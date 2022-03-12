@@ -43,7 +43,8 @@ public class ITable {
 
   // This returns a specific element from a specific row. get(0, 0) will return the first value, get(2,3) will return the 4th column value of the 3rd row.
   public Object get(int rowIndex, int columnIndex) {
-    return null;
+    final int i = (rowIndex * columnNames.size()) + columnIndex;
+    return values[i];
   }
 
   @Override
@@ -59,13 +60,16 @@ public class ITable {
     separator = "";
     string += "\n";
     j = 0;
-    for (int i = 0; i < values.length; i++) {
+    int a = 0;
+    for (int i = 0; i < values.length / columnNames.size(); i++) {
+      a = i * columnNames.size();
       while (j < columnNames.size()) {
-        string += separator + values[i];
+        string += separator + values[a];
         separator = "\t";
-        i++;
+        a++;
         j++;
       }
+      j = 0;
       separator = "";
       string += "\n";
     }
