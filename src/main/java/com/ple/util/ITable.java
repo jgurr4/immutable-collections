@@ -1,7 +1,5 @@
 package com.ple.util;
 
-import java.util.Arrays;
-
 @Immutable
 public class ITable {
   public final IList<String> columnNames;
@@ -16,15 +14,26 @@ public class ITable {
     return new ITable(columnNames, values);
   }
 
-  // Returns an array of all the objects inside a specified column. For example `name` column may be the 3rd column.
-  // So getColumn("name") will return all the values of get(n, 2) which would be range of 0-numRows.
-  // So (0,2), (1,2), (2,2) etc...
   public Object[] getColumn(String columnName) {
-    return null;
+    int columnIndex = 0;
+    for (int j = 0; j < columnNames.size(); j++) {
+      if (columnNames.get(j).equals(columnName)) {
+        columnIndex = j;
+      }
+    }
+    return getColumn(columnIndex);
   }
 
   public Object[] getColumn(int columnIndex) {
-    return null;
+    Object[] columnValues = new Object[values.length / columnNames.size()];
+    int j = 0;
+    for (int i = 0; i < values.length; i++) {
+      if (i == columnIndex + j*columnNames.size()) {
+        columnValues[j] = values[i];
+        j++;
+      }
+    }
+    return columnValues;
   }
   //This returns the next row of resultList.values. Which is a Object[]. Row 1 starts at 0. If there are 5 columns row 2 starts at 5.
   // The user specifies rowNum, then result is Object[5]{rowNum*5 + rowNum*5 + 5}
