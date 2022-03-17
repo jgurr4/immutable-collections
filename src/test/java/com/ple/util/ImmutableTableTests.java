@@ -49,6 +49,7 @@ public class ImmutableTableTests {
         "dalton", 17, LocalDate.of(2010, 4, 13)
     };
     final ITable userTable = ITable.make(colNames, objects);
+    System.out.println(userTable);
     final Object bobsDateAdded = userTable.get(1, 2);
     final Object johnsAge = userTable.get(0, 1);
     final Object daltonsDateAdded = userTable.get(3, 2);
