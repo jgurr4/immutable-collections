@@ -1,7 +1,5 @@
 package com.ple.util;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.*;
 
 @Immutable
@@ -231,7 +229,6 @@ public class IHashMap<K, V> implements IMap<K, V> {
     return new IHashMap<>(table, entriesInUse, density);
   }
 
-  @NotNull
   @Override
   public Iterator<IEntry<K, V>> iterator() {
     return new Iterator<>() {
