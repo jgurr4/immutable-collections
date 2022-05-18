@@ -1,7 +1,5 @@
 package com.ple.util;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -101,7 +99,6 @@ public class IArrayList<V> implements IList<V> {
     return values.length;
   }
 
-  @NotNull
   @Override
   public Iterator<V> iterator() {
     return new Iterator<>() {

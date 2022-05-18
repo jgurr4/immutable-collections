@@ -1,8 +1,5 @@
 package com.ple.util;
 
-import org.jetbrains.annotations.NotNull;
-
-import javax.annotation.Nullable;
 import java.util.*;
 
 @Immutable
@@ -170,7 +167,6 @@ public class IArrayMap<K, V> implements IMap<K, V> {
     return IArrayList.make(vs);
   }
 
-  @NotNull
   @Override
   public Iterator<IEntry<K, V>> iterator() {
     return new Iterator<>() {
