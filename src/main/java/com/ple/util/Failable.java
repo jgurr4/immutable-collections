@@ -26,8 +26,12 @@ public class Failable<T> {
     this.exception = exception;
   }
 
-  public static <T> Failable<T> make(T object, String failMessage, Throwable exception) {
-    return new Failable<>(object, failMessage, exception);
+  public static <T> Failable<T> make(String failMessage, Throwable exception) {
+    return new Failable<>(null, failMessage, exception);
+  }
+
+  public static <T> Failable<T> make(T object) {
+    return new Failable<>(object, null, null);
   }
 
   public <R> Failable<R> map(Function<T, R> mapper) {
